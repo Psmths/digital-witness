@@ -1,0 +1,73 @@
+version: '3'
+
+services:
+    elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.14.2
+        container_name: dw-elasticsearch
+        hostname: dw-elasticsearch
+        volumes:
+            - ./docker/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml
+            #- ./docker/elasticsearch/config/jvm.options:/usr/share/elasticsearch/config/jvm.options
+            - elasticdata:/usr/share/elasticsearch/data
+        ports:
+            - "9200:9200"
+        networks:
+            - dw
+    zookeeper:
+        image: wurstmeister/zookeeper
+        container_name: dw-zookeeper
+        hostname: dw-zookeeper
+        environment:
+            ZOOKEEPER_CLIENT_PORT: 2181
+            ZOOKEEPER_TICK_TIME: 2000
+        ports:
+            - "2181:2181"
+        networks:
+            - dw
+    kafka:
+        image: confluentinc/cp-kafka:latest
+        container_name: dw-kafka
+        hostname: dw-kafka
+        depends_on:
+            - zookeeper
+        ports:
+            - 29092:29092
+        environment:
+            KAFKA_BROKER_ID: 1
+            KAFKA_ZOOKEEPER_CONNECT: dw-zookeeper:2181
+            KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://dw-kafka:9092,PLAINTEXT_HOST://localhost:29092
+            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+            KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+            CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+            CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+            KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+            CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+            KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+        networks:
+            - dw
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+    logstash:
+        image: docker.elastic.co/logstash/logstash:7.14.2
+        container_name: dw-logstash
+        hostname: dw-logstash
+        depends_on: ['elasticsearch', 'kafka']
+        volumes:
+            - ./docker/logstash/config/:/usr/share/logstash/pipeline/
+        networks:
+            - dw
+    dw-scanner:
+        build: docker/dw-scanner
+        container_name: dw-scanner
+        hostname: dw-scanner
+        depends_on: ['elasticsearch', 'kafka', 'logstash']
+        networks:
+            - dw
+
+networks:
+    dw:
+        driver: bridge
+
+volumes:
+    elasticdata:
+        driver: local

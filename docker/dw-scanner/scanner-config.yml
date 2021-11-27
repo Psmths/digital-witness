@@ -1,0 +1,11 @@
+ports:
+    - 443
+    - 80
+    - 22
+networks:
+    - 10.0.0.0/8
+ratelimit: 10000
+interval: 0w
+masscan_wait: 1
+masscan_pipeline: topic-mass-scan-data
+kafka_bs_servers: ['dw-kafka:9092']
