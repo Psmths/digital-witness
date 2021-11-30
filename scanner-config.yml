@@ -1,0 +1,17 @@
+ports:
+    - 443
+    - 80
+    - 22
+    - 3389
+    - 21
+    - 8080
+    - 3306
+    - 25
+    - 110
+    - 137
+networks:
+    - 10.0.0.0/8
+ratelimit: 10000
+interval: 0w
+scan_data_pipeline: topic-scan-data
+kafka_bs_servers: ['127.0.0.1:9093']
